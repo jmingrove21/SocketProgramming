@@ -5,41 +5,50 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
+using System.Xml;
+using System.Threading;
 namespace SocketProgramming
 {
     class Program//server Section
     {
-        public static string dateTime ="["+DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")+"]";
-        public static int port_number = 12345;
+        public static string dateTime = "[" + DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss") + "]";
+      
         static void Main(string[] args)
         {
             new Program();
         }
         public Program()
         {
-            Socket server = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            IPEndPoint ipep = new IPEndPoint(IPAddress.Any, port_number);
-            server.Bind(ipep);
-            server.Listen(10);
+            Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-            Console.WriteLine(dateTime+"[Msg] Server Start...");
-            Console.WriteLine(dateTime+"[Msg] Port number : "+port_number);
+            // (2) 포트에 바인드
+            IPEndPoint ep = new IPEndPoint(IPAddress.Any, 7000);
+            sock.Bind(ep);
 
-            Socket client = server.Accept();
-            IPEndPoint ip = (IPEndPoint)client.RemoteEndPoint;
-            Console.WriteLine(dateTime + "[Connect] Connect by " + ip.Address);
+            // (3) 포트 Listening 시작
+            sock.Listen(10);
 
-            String buf_str = "Connect Server Success!";
-            Byte[] buf = Encoding.UTF8.GetBytes(buf_str);
-            client.Send(buf);
-            Byte[] rec_buf = new Byte[1024];
-            client.Receive(rec_buf);
-            String rec_str = Encoding.Default.GetString(rec_buf);
-            Console.WriteLine(dateTime + "[recieve] " + rec_str);
+            // (4) 연결을 받아들여 새 소켓 생성 (하나의 연결만 받아들임)
+            Socket clientSock = sock.Accept();
 
-            client.Close();
-            server.Close();
+            byte[] buff = new byte[8192];
+            while (!Console.KeyAvailable) // 키 누르면 종료
+            {
+                // (5) 소켓 수신
+                int n = clientSock.Receive(buff);
+
+                string data = Encoding.UTF8.GetString(buff, 0, n);
+                Console.WriteLine(data);
+
+                // (6) 소켓 송신
+                clientSock.Send(buff, 0, n, SocketFlags.None);  // echo
+            }
+
+            // (7) 소켓 닫기
+            clientSock.Close();
+            sock.Close();
         }
+
     }
 
 }
